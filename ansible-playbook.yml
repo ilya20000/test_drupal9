@@ -1,0 +1,83 @@
+- hosts: sankov
+  tasks:
+  - name: Install packets
+    apt:
+      name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - gnupg-agent
+      - software-properties-common
+
+  - name: fetch docker apt key
+    shell: curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+
+  - name: Add docker repository
+    shell: add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+  
+  - name: Add set-local-rtc
+    shell: timedatectl set-local-rtc 1
+  
+  - name: Refresh cache
+    apt:
+      update_cache: yes
+
+  - name: Update distro
+    apt:
+      name: "*"
+      state: latest
+
+  - name: Update all packages to the latest version
+    apt:
+      upgrade: dist
+
+  - name: Install Docker
+    apt:
+      name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      state: latest
+
+  - name: Install Docker-Compose
+    apt:
+      name:
+      - docker-compose-plugin
+      state: latest
+  
+  - name: Add work folders 
+    shell: mkdir /srv/nginx /srv/nginx/conf.d /srv/nginx/www /srv/nginx/www/drupal9 /srv/nginx/logs /srv/mysql /srv/php
+
+  - name: Copy php-fpm files
+    copy:
+      src: ./{{ item }}
+      dest: /srv/php/{{ item }}
+    loop:
+    - 99-php.ini
+    - Dockerfile
+
+  - name: Copy drupal9.conf file
+    copy:
+      src: ./{{ item }}
+      dest: /srv/nginx/conf.d/{{ item }}
+    loop:
+    - drupal9.conf
+
+  - name: Copy docker-compose.yml file
+    copy:
+      src: ./{{ item }}
+      dest: /srv/{{ item }}
+    loop:
+    - docker-compose.yml
+
+  - name: Docker Compose up
+    shell: cd /srv && docker compose up -d
+
+  - name: Install Drupal:last from composer
+    shell: docker exec -it php-fpm bash -c 'composer -n create-project drupal/recommended-project drupal9'
+
+  - name: Create Drupal translations dir
+    shell: mkdir /srv/nginx/www/drupal9/web/sites/default/files /srv/nginx/www/drupal9/web/sites/default/files/translations
+  
+  - name: Change owner Drupal dir
+    shell: docker exec -it php-fpm bash -c 'chown -R www-data:www-data drupal9/'

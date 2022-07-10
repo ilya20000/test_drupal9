@@ -1,0 +1,39 @@
+version: '1'
+
+services:
+
+    mysql:
+        container_name: mysql
+        image: mysql:latest
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=123456789zxc
+            - MYSQL_DATABASE=drupal9
+            - MYSQL_USER=drupal9
+            - MYSQL_PASSWORD=z123456789
+        volumes:
+            - ./mysql:/var/lib/mysql
+
+
+    php:
+        container_name: php-fpm
+        build: ./php
+        volumes:
+            - ./nginx/www:/var/www
+        links:
+            - mysql
+     
+     
+    nginx:
+        container_name: nginx
+        image: nginx:latest
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./nginx/conf.d:/etc/nginx/conf.d
+            - ./nginx/www:/var/www/
+            - ./nginx/logs:/var/log/nginx/
+        links:
+            - php
